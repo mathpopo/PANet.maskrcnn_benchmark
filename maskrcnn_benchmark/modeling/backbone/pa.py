@@ -50,7 +50,7 @@ class PA(nn.Module):
             self.add_module(inner_block, inner_block_module)
             self.add_module(mid_block, mid_block_module)
             self.inner_blocks.append(inner_block)
-            self.layer_blocks.append(mid_block)
+            self.mid_blocks.append(mid_block)
         self.top_blocks = top_blocks
 
     def forward(self, x):
@@ -63,9 +63,9 @@ class PA(nn.Module):
         """
         last_inner = getattr(self, self.inner_blocks[-1])(x[-1])
         results = []
-        results.append(getattr(self, self.layer_blocks[-1])(last_inner))
-        for feature, inner_block, layer_block in zip(
-            x[:-1][::-1], self.inner_blocks[:-1][::-1], self.layer_blocks[:-1][::-1]
+        results.append(getattr(self, self.mid_blocks[-1])(last_inner))
+        for feature, inner_block, mid_block in zip(
+            x[:-1][::-1], self.inner_blocks[:-1][::-1], self.mid_blocks[:-1][::-1]
         ):
             if not inner_block:
                 continue
@@ -75,7 +75,7 @@ class PA(nn.Module):
             # inner_top_down = F.upsample(last_inner, size=inner_lateral.shape[-2:],
             # mode='bilinear', align_corners=False)
             last_inner = inner_lateral + inner_top_down
-            results.insert(0, getattr(self, layer_block)(last_inner))
+            results.insert(0, getattr(self, mid_block)(last_inner))
 
         pa_results = []
         low_feature = results[0]
