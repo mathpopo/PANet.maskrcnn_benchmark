@@ -195,8 +195,8 @@ class Masker(object):
 
 
 def make_roi_mask_post_processor(cfg):
-    if cfg.MODEL.ROI_MASK_HEAD.POSTPROCESS_MASKS:
-        mask_threshold = cfg.MODEL.ROI_MASK_HEAD.POSTPROCESS_MASKS_THRESHOLD
+    if cfg.MODEL.ROI_MASK_HEAD.POSTPROCESS_MASKS:                                   # false
+        mask_threshold = cfg.MODEL.ROI_MASK_HEAD.POSTPROCESS_MASKS_THRESHOLD        # 0.5
         masker = Masker(threshold=mask_threshold, padding=1)
     else:
         masker = None

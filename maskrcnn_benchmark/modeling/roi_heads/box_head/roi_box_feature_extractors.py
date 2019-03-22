@@ -114,12 +114,13 @@ class PA2MLPFeatureExtractor(nn.Module):
     def forward(self, x, proposals):
         x = self.pooler(x, proposals)
         batch_size = x[0].size(0)
+        assert len(x[0].size()) == 4
         for i in range(len(x)):
-            x[i] = F.relu(self.fc6s[i](x[i].view(batch_size, -1)))
+            x[i] = F.relu(self.fc6s[i](x[i].view(batch_size, -1)), inplace=True)
             if i > 0:
                 x[0] = torch.max(x[0], x[i])
         x = x[0]
-        x = F.relu(self.fc7(x))
+        x = F.relu(self.fc7(x), inplace=True)
 
         return x
 
