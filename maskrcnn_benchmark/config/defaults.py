@@ -109,7 +109,7 @@ _C.MODEL.FPN.USE_RELU = False
 # ---------------------------------------------------------------------------- #
 _C.MODEL.PA = CN()
 _C.MODEL.PA.USE_GN = False
-_C.MODEL.PA.USE_RELU = True
+_C.MODEL.PA.USE_RELU = False
 
 
 # ---------------------------------------------------------------------------- #
