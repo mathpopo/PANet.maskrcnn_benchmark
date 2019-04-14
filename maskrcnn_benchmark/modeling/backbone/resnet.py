@@ -24,6 +24,7 @@ from torch import nn
 
 from maskrcnn_benchmark.layers import FrozenBatchNorm2d
 from maskrcnn_benchmark.layers import Conv2d
+from maskrcnn_benchmark.layers import NONLocalBlock2D
 from maskrcnn_benchmark.modeling.make_layers import group_norm
 from maskrcnn_benchmark.utils.registry import Registry
 
@@ -76,6 +77,22 @@ ResNet152FPNStagesTo5 = tuple(
     StageSpec(index=i, block_count=c, return_features=r)
     for (i, c, r) in ((1, 3, True), (2, 8, True), (3, 36, True), (4, 3, True))
 )
+# ResNet-50-PA (including all stages)
+ResNet50PAStagesTo5 = tuple(
+    StageSpec(index=i, block_count=c, return_features=r)
+    for (i, c, r) in ((1, 3, True), (2, 4, True), (3, 6, True), (4, 3, True))
+)
+# ResNet-101-PA (including all stages)
+ResNet101PAStagesTo5 = tuple(
+    StageSpec(index=i, block_count=c, return_features=r)
+    for (i, c, r) in ((1, 3, True), (2, 4, True), (3, 23, True), (4, 3, True))
+)
+# ResNet-152-PA (including all stages)
+ResNet152PAStagesTo5 = tuple(
+    StageSpec(index=i, block_count=c, return_features=r)
+    for (i, c, r) in ((1, 3, True), (2, 8, True), (3, 36, True), (4, 3, True))
+)
+
 
 class ResNet(nn.Module):
     def __init__(self, cfg):
@@ -115,6 +132,7 @@ class ResNet(nn.Module):
                 num_groups,
                 cfg.MODEL.RESNETS.STRIDE_IN_1X1,
                 first_stride=int(stage_spec.index > 1) + 1,
+                use_non_local=cfg.MODEL.BACKBONE.USE_NON_LOCAL and stage_spec.index == 3,
             )
             in_channels = out_channels
             self.add_module(name, module)
@@ -204,11 +222,12 @@ def _make_stage(
     num_groups,
     stride_in_1x1,
     first_stride,
-    dilation=1
+    dilation=1,
+    use_non_local=False
 ):
     blocks = []
     stride = first_stride
-    for _ in range(block_count):
+    for block_id in range(block_count):
         blocks.append(
             transformation_module(
                 in_channels,
@@ -220,6 +239,10 @@ def _make_stage(
                 dilation=dilation
             )
         )
+        if use_non_local and block_id == block_count - 2:
+            blocks.append(
+                NONLocalBlock2D(in_channels=out_channels, sub_sample=True, bn_layer=False)
+            )
         stride = 1
         in_channels = out_channels
     return nn.Sequential(*blocks)
@@ -411,9 +434,11 @@ _STAGE_SPECS = Registry({
     "R-101-C4": ResNet101StagesTo4,
     "R-101-C5": ResNet101StagesTo5,
     "R-50-FPN": ResNet50FPNStagesTo5,
-    "R-50-PA": ResNet50FPNStagesTo5,
+    "R-50-PA": ResNet50PAStagesTo5,
     "R-50-FPN-RETINANET": ResNet50FPNStagesTo5,
     "R-101-FPN": ResNet101FPNStagesTo5,
+    "R-101-PA": ResNet101PAStagesTo5,
     "R-101-FPN-RETINANET": ResNet101FPNStagesTo5,
     "R-152-FPN": ResNet152FPNStagesTo5,
+    "R-152-PA": ResNet152PAStagesTo5,
 })
