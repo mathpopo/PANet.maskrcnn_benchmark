@@ -9,7 +9,7 @@ from maskrcnn_benchmark.utils.model_serialization import load_state_dict
 from maskrcnn_benchmark.utils.registry import Registry
 
 
-def _rename_basic_resnet_weights(layer_keys):
+def _rename_basic_resnet_weights(layer_keys, use_non_local=False):
     layer_keys = [k.replace("_", ".") for k in layer_keys]
     layer_keys = [k.replace(".w", ".weight") for k in layer_keys]
     layer_keys = [k.replace(".bn", "_bn") for k in layer_keys]
@@ -58,6 +58,14 @@ def _rename_basic_resnet_weights(layer_keys):
         for k in layer_keys]
     layer_keys = [k.replace("downsample.0.gn.bias", "downsample.1.bias") \
         for k in layer_keys]
+    if use_non_local:
+        layer3_block_num = -1
+        for k in layer_keys:
+            if "layer3" in k:
+                layer3_block_num = max(layer3_block_num, int(k.split('.')[1]))
+        old_key = "layer3." + str(layer3_block_num)
+        new_key = "layer3." + str(layer3_block_num+1)
+        layer_keys = [k.replace(old_key, new_key) for k in layer_keys]
 
     return layer_keys
 
@@ -81,7 +89,7 @@ def _rename_fpn_weights(layer_keys, stage_names):
     return layer_keys
 
 
-def _rename_weights_for_resnet(weights, stage_names):
+def _rename_weights_for_resnet(weights, stage_names, use_non_local=False):
     original_keys = sorted(weights.keys())
     layer_keys = sorted(weights.keys())
 
@@ -90,7 +98,7 @@ def _rename_weights_for_resnet(weights, stage_names):
     layer_keys = [k if k != "pred_w" else "fc1000_w" for k in layer_keys]
 
     # performs basic renaming: _ -> . , etc
-    layer_keys = _rename_basic_resnet_weights(layer_keys)
+    layer_keys = _rename_basic_resnet_weights(layer_keys, use_non_local)
 
     # FPN
     layer_keys = _rename_fpn_weights(layer_keys, stage_names)
@@ -168,7 +176,7 @@ def load_resnet_c2_format(cfg, f):
     arch = conv_body.replace("-C4", "").replace("-C5", "").replace("-FPN", "").replace("-PA", "")
     arch = arch.replace("-RETINANET", "")
     stages = _C2_STAGE_NAMES[arch]
-    state_dict = _rename_weights_for_resnet(state_dict, stages)
+    state_dict = _rename_weights_for_resnet(state_dict, stages, cfg.MODEL.BACKBONE.USE_NON_LOCAL)
     return dict(model=state_dict)
 
 
